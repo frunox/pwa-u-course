@@ -190,7 +190,7 @@ self.addEventListener('activate', function (event) {
 // plus cache w/ network fallback for other URLs ('internal' resources)
 // plus cache only for static assets stored in the 'install' event
 self.addEventListener('fetch', function (event) {
-  let url = 'https://httpbin.org/get';
+  let url = 'https://pwagram-3bf0b-default-rtdb.firebaseio.com/posts';
   console.log('FETCH event.request.url', event.request.url);
 
   if (event.request.url.indexOf(url) > -1) {
