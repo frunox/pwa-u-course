@@ -1,55 +1,57 @@
-let CACHE_STATIC_NAME = 'static-v16';
-let CACHE_DYNAMIC_NAME = 'dynamic-v2';
-let STATIC_FILES = [
+importScripts('/src/js/idb.js');
+importScripts('src/js/utility.js');
+
+var CACHE_STATIC_NAME = 'static-v17';
+var CACHE_DYNAMIC_NAME = 'dynamic-v2';
+var STATIC_FILES = [
   '/',
   '/index.html',
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/idb.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
-  'https://code.getmdl.io/1.3.0/material.min.js',
+  '/src/js/material.min.js',
   '/src/css/app.css',
   '/src/css/feed.css',
   '/src/images/main-image.jpg',
   'https://fonts.googleapis.com/css?family=Roboto:400,700',
   'https://fonts.googleapis.com/icon?family=Material+Icons',
-  'https://code.getmdl.io/1.3.0/material.indigo-pink.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css',
 ];
 
-// CODE for trimming dynamic cache V96
-// const trimCache = (cacheName, maxItems) => {
-//   caches.open(cacheName).then((cache) => {
-//     return cache.keys().then((keys) => {
-//       if (keys.length > maxItems) {
-//         cache.delete(keys[0]).then(trimCache(cacheName, maxItems));
-//       }
-//     });
-//   });
-// };
+// function trimCache(cacheName, maxItems) {
+//   caches.open(cacheName)
+//     .then(function (cache) {
+//       return cache.keys()
+//         .then(function (keys) {
+//           if (keys.length > maxItems) {
+//             cache.delete(keys[0])
+//               .then(trimCache(cacheName, maxItems));
+//           }
+//         });
+//     })
+// }
 
 self.addEventListener('install', function (event) {
-  console.log('[SW] installing SW..', event);
+  console.log('[Service Worker] Installing Service Worker ...', event);
   event.waitUntil(
-    caches.open(CACHE_STATIC_NAME).then((cache) => {
-      console.log('SW: Precaching app shell');
+    caches.open(CACHE_STATIC_NAME).then(function (cache) {
+      console.log('[Service Worker] Precaching App Shell');
       cache.addAll(STATIC_FILES);
-      // cache individual files
-      // cache.add('/');
-      // cache.add('/index.html');
-      // cache.add('/src/js/app.js');
     })
   );
 });
 
 self.addEventListener('activate', function (event) {
-  console.log('[SW] activating SW..', event);
+  console.log('[Service Worker] Activating Service Worker ....', event);
   event.waitUntil(
-    caches.keys().then((keyList) => {
+    caches.keys().then(function (keyList) {
       return Promise.all(
-        keyList.map((key) => {
-          if (key != CACHE_STATIC_NAME && key != CACHE_DYNAMIC_NAME) {
-            console.log('SW  remove old cache', key);
+        keyList.map(function (key) {
+          if (key !== CACHE_STATIC_NAME && key !== CACHE_DYNAMIC_NAME) {
+            console.log('[Service Worker] Removing old cache.', key);
             return caches.delete(key);
           }
         })
@@ -59,180 +61,54 @@ self.addEventListener('activate', function (event) {
   return self.clients.claim();
 });
 
-// cache w/ network fallback
-// self.addEventListener('fetch', function (event) {
-//   // console.log('[SW] fetch event', event.request.url);
-//   event.respondWith(
-//     caches.match(event.request).then((response) => {
-//       if (response) {
-//         // console.log('already cached');
-//         return response;
-//       } else {
-//         // console.log('fetching...');
-//         return fetch(event.request)
-//           .then((res) => {
-//             return caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
-//               cache.put(event.request.url, res.clone());
-//               return res;
-//             });
-//           })
-//           .catch((err) => {
-//             return caches.open(CACHE_STATIC_NAME).then((cache) => {
-//               return cache.match('/offline.html');
-//             });
-//           });
-//       }
-//     })
-//   );
-// });
+function isInArray(string, array) {
+  var cachePath;
+  if (string.indexOf(self.origin) === 0) {
+    // request targets domain where we serve the page from (i.e. NOT a CDN)
+    // console.log('matched ', string);
+    cachePath = string.substring(self.origin.length); // take the part of the URL AFTER the domain (e.g. after localhost:8080)
+  } else {
+    cachePath = string; // store the full request (for CDNs)
+  }
+  return array.indexOf(cachePath) > -1;
+}
 
-// cache only strategy
-// self.addEventListener('fetch', function (event) {
-//   event.respondWith(caches.match(event.request));
-// });
-
-// network only strategy
-// self.addEventListener('fetch', function (event) {
-//   event.respondWith(fetch(event.request));
-// });
-
-// network w/ cache fallback
-// self.addEventListener('fetch', function (event) {
-//   event.respondWith(
-//     fetch(event.request).catch((err) => {
-//       return caches.match(event.request);
-//     })
-//   );
-// });
-
-// network w/ cache fallback & dynamic caching
-// self.addEventListener('fetch', function (event) {
-//   event.respondWith(
-//     fetch(event.request)
-//       .then((res) => {
-//         return caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
-//           cache.put(event.request.url, res.clone());
-//           return res;
-//         });
-//       })
-//       .catch((err) => {
-//         return caches.match(event.request);
-//       })
-//   );
-// });
-
-// cache then network & dynamic caching V87
-// self.addEventListener('fetch', function (event) {
-//   console.log('[SW] fetch event', event.request.url);
-//   event.respondWith(
-//     caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
-//       return fetch(event.request)
-//         .then((res) => {
-//           cache.put(event.request, res.clone());
-//           return res;
-//         })
-//         .catch((err) => {
-//           console.log('Error in respondWith', err);
-//         });
-//     })
-//   );
-// });
-
-// cache then network & dynamic caching for URLs in 'regular' JS files V88
-// plus cache w/ network fallback for other URLs ('internal' resources)
-// self.addEventListener('fetch', function (event) {
-//   let url = 'https://httpbin.org/get';
-
-//   if (event.request.url.indexOf(url) > -1) {
-//     console.log('[SW] fetch event', event.request.url);
-//     event.respondWith(
-//       caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
-//         return fetch(event.request)
-//           .then((res) => {
-//             cache.put(event.request, res.clone());
-//             return res;
-//           })
-//           .catch((err) => {
-//             console.log('Error in respondWith', err);
-//           });
-//       })
-//     );
-//   } else {
-//     event.respondWith(
-//       caches.match(event.request).then((response) => {
-//         if (response) {
-//           // console.log('already cached');
-//           return response;
-//         } else {
-//           // console.log('fetching...');
-//           return fetch(event.request)
-//             .then((res) => {
-//               return caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
-//                 cache.put(event.request.url, res.clone());
-//                 return res;
-//               });
-//             })
-//             .catch((err) => {
-//               return caches.open(CACHE_STATIC_NAME).then((cache) => {
-//                 // conditional added in V89
-//                 if (event.request.url.indexOf('/help')) {
-//                   return cache.match('/offline.html');
-//                 }
-//               });
-//             });
-//         }
-//       })
-//     );
-//   }
-// });
-
-// cache then network & dynamic caching for URLs in 'regular' JS files V90
-// plus cache w/ network fallback for other URLs ('internal' resources)
-// plus cache only for static assets stored in the 'install' event
 self.addEventListener('fetch', function (event) {
-  let url = 'https://httpbin.org/get';
-  console.log('FETCH event.request.url', event.request.url);
-
+  var url = 'https://pwagram-3bf0b-default-rtdb.firebaseio.com/posts';
   if (event.request.url.indexOf(url) > -1) {
-    console.log('[SW] fetch event', event.request.url);
     event.respondWith(
-      caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
-        return fetch(event.request)
-          .then((res) => {
-            // trimCache(CACHE_DYNAMIC_NAME, 3);
-            cache.put(event.request, res.clone());
-            return res;
+      fetch(event.request).then((res) => {
+        let cloneRes = res.clone();
+        clearAllData('posts')
+          .then(() => {
+            return cloneRes.json();
           })
-          .catch((err) => {
-            console.log('Error in respondWith', err);
+          .then((data) => {
+            for (var key in data) {
+              writeData('posts', data[key]);
+            }
           });
+        return res;
       })
     );
-  } else if (
-    // new RegExp('\\b' + STATIC_FILES.join('\\b|\\b') + '\\b').test(event.request.url)
-    STATIC_FILES.indexOf(event.request.url) > -1
-  ) {
-    console.log('Get static asset from cache');
+  } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(caches.match(event.request));
   } else {
     event.respondWith(
-      caches.match(event.request).then((response) => {
+      caches.match(event.request).then(function (response) {
         if (response) {
-          console.log('already cached');
           return response;
         } else {
-          console.log('fetching...');
           return fetch(event.request)
-            .then((res) => {
-              return caches.open(CACHE_DYNAMIC_NAME).then((cache) => {
+            .then(function (res) {
+              return caches.open(CACHE_DYNAMIC_NAME).then(function (cache) {
                 // trimCache(CACHE_DYNAMIC_NAME, 3);
                 cache.put(event.request.url, res.clone());
                 return res;
               });
             })
-            .catch((err) => {
-              return caches.open(CACHE_STATIC_NAME).then((cache) => {
-                // if (event.request.url.indexOf('/help')) {
+            .catch(function (err) {
+              return caches.open(CACHE_STATIC_NAME).then(function (cache) {
                 if (event.request.headers.get('accept').includes('text/html')) {
                   return cache.match('/offline.html');
                 }
@@ -243,3 +119,59 @@ self.addEventListener('fetch', function (event) {
     );
   }
 });
+
+// self.addEventListener('fetch', function(event) {
+//   event.respondWith(
+//     caches.match(event.request)
+//       .then(function(response) {
+//         if (response) {
+//           return response;
+//         } else {
+//           return fetch(event.request)
+//             .then(function(res) {
+//               return caches.open(CACHE_DYNAMIC_NAME)
+//                 .then(function(cache) {
+//                   cache.put(event.request.url, res.clone());
+//                   return res;
+//                 })
+//             })
+//             .catch(function(err) {
+//               return caches.open(CACHE_STATIC_NAME)
+//                 .then(function(cache) {
+//                   return cache.match('/offline.html');
+//                 });
+//             });
+//         }
+//       })
+//   );
+// });
+
+// self.addEventListener('fetch', function(event) {
+//   event.respondWith(
+//     fetch(event.request)
+//       .then(function(res) {
+//         return caches.open(CACHE_DYNAMIC_NAME)
+//                 .then(function(cache) {
+//                   cache.put(event.request.url, res.clone());
+//                   return res;
+//                 })
+//       })
+//       .catch(function(err) {
+//         return caches.match(event.request);
+//       })
+//   );
+// });
+
+// Cache-only
+// self.addEventListener('fetch', function (event) {
+//   event.respondWith(
+//     caches.match(event.request)
+//   );
+// });
+
+// Network-only
+// self.addEventListener('fetch', function (event) {
+//   event.respondWith(
+//     fetch(event.request)
+//   );
+// });
