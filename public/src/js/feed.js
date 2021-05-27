@@ -129,7 +129,7 @@ if ('indexedDB' in window) {
 // Section 9, get form data
 
 const sendData = () => {
-  fetch('https://pwagram-3bf0b-default-rtdb.firebaseio.com/posts.json', {
+  fetch('https://us-central1-pwagram-3bf0b.cloudfunctions.net/storePostData', {
     method: POST,
     headers: {
       'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 importScripts('/src/js/idb.js');
 importScripts('src/js/utility.js');
 
-var CACHE_STATIC_NAME = 'static-v22';
+var CACHE_STATIC_NAME = 'static-v23';
 var CACHE_DYNAMIC_NAME = 'dynamic-v2';
 var STATIC_FILES = [
   '/',
@@ -184,7 +184,7 @@ self.addEventListener('sync', (event) => {
       readAllData('sync-posts').then((data) => {
         for (let dt of data) {
           fetch(
-            'https://pwagram-3bf0b-default-rtdb.firebaseio.com/posts.json',
+            'https://us-central1-pwagram-3bf0b.cloudfunctions.net/storePostData',
             {
               method: 'POST',
               headers: {
@@ -204,7 +204,9 @@ self.addEventListener('sync', (event) => {
               console.log('Sent data', res);
               // empty sync-post object store in IDB
               if (res.ok) {
-                deleteItemFromData('sync-posts', dt.id);
+                res.json().then((resData) => {
+                  deleteItemFromData('sync-posts', resData.id);
+                });
               }
             })
             .catch((err) => {
