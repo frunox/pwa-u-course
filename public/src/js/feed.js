@@ -4,6 +4,10 @@ var closeCreatePostModalButton = document.querySelector(
   '#close-create-post-modal-btn'
 );
 var sharedMomentsArea = document.querySelector('#shared-moments');
+// for section 9, set up background sync when form is completed
+let form = document.querySelector('form');
+let titleInput = document.querySelector('#title');
+let locationInput = document.querySelector('#location');
 
 function openCreatePostModal() {
   // createPostArea.style.display = 'block';
@@ -121,3 +125,59 @@ if ('indexedDB' in window) {
     }
   });
 }
+
+// Section 9, get form data
+
+const sendData = () => {
+  fetch('https://us-central1-pwagram-3bf0b.cloudfunctions.net/storePostData', {
+    method: POST,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      id: new Date().toISOString(),
+      title: titleInput.value,
+      location: locationInput.value,
+      image:
+        'https://firebasestorage.googleapis.com/v0/b/pwagram-3bf0b.appspot.com/o/sf-boat.jpg?alt=media&token=738a9e3a-31d6-41c5-ae74-33e612afe17a',
+    }),
+  }).then((res) => {
+    console.log('Sent data', res);
+    updateUI();
+  });
+};
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (titleInput.value.trim() === '' || locationInput.value.trim() === '') {
+    alert('Please enter valid data');
+    return;
+  }
+  closeCreatePostModal();
+  console.log('in form input');
+  // check for access to SW, then register sync event
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    navigator.serviceWorker.ready.then((sw) => {
+      let post = {
+        id: new Date().toISOString(),
+        title: titleInput.value,
+        location: locationInput.value,
+      };
+      writeData('sync-posts', post)
+        .then(() => {
+          return sw.sync.register('sync-new-posts');
+        })
+        .then(() => {
+          let snackbarContainer = document.querySelector('#confirmation-toast');
+          let data = { message: 'Your post was saved for syncing' };
+          snackbarContainer.MaterialSnackbar.showSnackbar(data);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    });
+  } else {
+    sendData();
+  }
+});
